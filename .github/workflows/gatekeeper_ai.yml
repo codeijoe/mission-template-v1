@@ -14,7 +14,7 @@
 name: Codeijoe Gatekeeper v3.0 (AI-Powered)
 
 # Trigger: pull_request_target mengizinkan akses ke Secrets (Gemini Key)
-# Aman karena workflow yang jalan adalah versi dari branch 'main' (milik kita), bukan milik fork user
+# Aman karena workflow yang jalan adalah versi dari branch 'main' (milik kita)
 on:
   pull_request_target:
     branches: ["main"]
@@ -69,6 +69,7 @@ jobs:
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
           # INJECT SYSTEM CORTEX DARI SECRET (Level 4 Operator Brain)
+          # 🛑 SECURITY: NEVER HARDCODE PROMPTS HERE. USE SECRETS.
           SYSTEM_PROMPT: ${{ secrets.SYSTEM_CORTEX_PROMPT }}
         with:
           script: |
@@ -98,7 +99,8 @@ jobs:
             // --- LEVEL 2: DEEP SCAN (Gemini AI) ---
             
             // Ambil System Prompt dari Secret, atau fallback ke default jika kosong
-            const systemInstruction = process.env.SYSTEM_PROMPT || "You are a strict code auditor.";
+            // Default is intentionally weak to force proper Secret setup.
+            const systemInstruction = process.env.SYSTEM_PROMPT || "You are a software auditor. Check for reasoning.";
 
             const userPrompt = `
             INPUT DATA:
@@ -231,8 +233,8 @@ jobs:
                           `**System Integrity Check:** FAILED.\n` +
                           `Your code did not pass the automated tests.\n\n` +
                           `<details><summary>Expand Error Logs</summary>\n\n` +
-                          `\n```\n${logSnippet}...\n` +
-                          `\n```\n` +
+                          `\n\n```\n${logSnippet}...\n` +
+                          `\n\n```\n` +
                           `\n</details>\n\n` +
                           `**Directive:** Debug locally. Do not waste the Auditor's time.`;
 
