@@ -14,7 +14,7 @@
 name: Codeijoe Gatekeeper v3.0 (AI-Powered)
 
 # Trigger: pull_request_target mengizinkan akses ke Secrets (Gemini Key)
-# Aman karena workflow yang jalan adalah versi dari branch 'main' (milik kita)
+# Aman karena workflow yang jalan adalah versi dari branch 'main' (milik kita), bukan milik fork user
 on:
   pull_request_target:
     branches: ["main"]
@@ -68,7 +68,7 @@ jobs:
         uses: actions/github-script@v7
         env:
           GEMINI_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # INJECT SYSTEM CORTEX DARI SECRET
+          # INJECT SYSTEM CORTEX DARI SECRET (Level 4 Operator Brain)
           SYSTEM_PROMPT: ${{ secrets.SYSTEM_CORTEX_PROMPT }}
         with:
           script: |
@@ -115,7 +115,7 @@ jobs:
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({
                   contents: [
-                    { 
+                    {
                       role: "user", 
                       parts: [{ text: systemInstruction + "\n\n" + userPrompt }] 
                     }
@@ -231,10 +231,8 @@ jobs:
                           `**System Integrity Check:** FAILED.\n` +
                           `Your code did not pass the automated tests.\n\n` +
                           `<details><summary>Expand Error Logs</summary>\n\n` +
-                          `\`
-```\n${logSnippet}...\n`
-\
-```\n` +
+                          `\n```\n${logSnippet}...\n` +
+                          `\n```\n` +
                           `\n</details>\n\n` +
                           `**Directive:** Debug locally. Do not waste the Auditor's time.`;
 
