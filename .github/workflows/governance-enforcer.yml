@@ -1,0 +1,112 @@
+# Copyright 2024 Codeijoe
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+name: "Codeijoe Governance Enforcer v3.0"
+
+# Trigger pada setiap aktivitas PR (Text Check)
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: ["main"]
+
+permissions:
+  pull-requests: write
+  contents: read
+
+jobs:
+  enforce-policy:
+    name: "⚖️ Policy & Legal Compliance"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Context
+        uses: actions/checkout@v4
+
+      # ========================================================
+      # 1. THE TERMINOLOGY POLICE (Polisi Bahasa v3.0)
+      # Memastikan mindset "Auditor" bukan "Student"
+      # ========================================================
+      - name: Enforce Audit Terminology
+        id: term_check
+        env:
+          TITLE: ${{ github.event.pull_request.title }}
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # Daftar kata terlarang (Case Insensitive)
+          # Update v3: Menambah 'homework', 'tutorial', 'lesson'
+          BANNED_REGEX="mentorship|mentee|mentor|teacher|student|help me|teach me|guide me|homework|tutorial|lesson"
+
+          if echo "$TITLE $BODY" | grep -iEq "$BANNED_REGEX"; then
+            echo "::error title=Terminology Violation::Forbidden terms detected. This is an Audit Authority, not a School."
+            echo "violation=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      # ========================================================
+      # 2. THE LAWYER (Legal Sign-off v3.0)
+      # Memastikan 'Liability Waiver' dicentang sesuai PR Template Baru
+      # ========================================================
+      - name: Verify Liability Waiver
+        id: legal_check
+        env:
+          BODY: ${{ github.event.pull_request.body }}
+        run: |
+          # v3.0 Template Requirement:
+          # - [x] I certify that this code is my own logic...
+          # - [x] I understand that if I cheated...
+
+          # Kita cek salah satu string kunci yang unik untuk memastikan user baca
+          REQUIRED_KEYWORD="certify that this code is my own logic"
+          CHECKBOX_PATTERN="- [x] "
+
+          # Cek apakah ada pola [x] ... certify ...
+          if ! echo "$BODY" | grep -i "$REQUIRED_KEYWORD" | grep -Fq "$CHECKBOX_PATTERN"; then
+            echo "::error title=Legal Compliance::You must accept the Liability Waiver (Check the box: I certify that this code is my own logic)."
+            echo "legal_missing=true" >> $GITHUB_OUTPUT
+            exit 1
+          fi
+
+      # ========================================================
+      # 3. AUTOMATED FEEDBACK (The Clerk)
+      # Memberi tahu user cara memperbaiki bahasa/legal
+      # ========================================================
+      - name: Reject Violation
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const termViolation = '${{ steps.term_check.outputs.violation }}' === 'true';
+            const legalMissing = '${{ steps.legal_check.outputs.legal_missing }}' === 'true';
+
+            let msg = '### ⚖️ GOVERNANCE VIOLATION\n\n';
+
+            if (termViolation) {
+              msg += '**🚫 Terminology Error:**\n';
+              msg += 'Codeijoe is an **Audit Authority**. We do not use academic terms.\n';
+              msg += '- ❌ Bad: Student, Mentor, Homework, Help Me.\n';
+              msg += '- ✅ Good: Auditor, System, Mission, Trade-off.\n\n';
+            }
+
+            if (legalMissing) {
+               msg += '**📝 Legal Waiver Missing:**\n';
+               msg += 'You must accept the **Liability Waiver** in the PR description.\n';
+               msg += 'Please edit your PR and mark the checkbox: `[x] I certify that this code is my own logic...`\n\n';
+            }
+
+            msg += '**Action Required:** Update your PR description to comply. The Audit Gate will remain closed until resolved.';
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: msg
+            });

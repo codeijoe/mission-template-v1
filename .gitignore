@@ -1,2 +1,8 @@
 node_modules/
 .env
+
+# SYSTEM CORTEX PROTECTION (DO NOT REMOVE)
+.cortex_*.yaml
+governance_ref*
+.governance_ref
+.architech_ref
